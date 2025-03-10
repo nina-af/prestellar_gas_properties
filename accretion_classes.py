@@ -754,7 +754,7 @@ class SnapshotGasProperties:
             # Get idx of unique accreted non-feedback gas particles.
             idx_g, num_feedback_new = self.get_idx(acc_gas_ids)
             
-            if len(idx_g) == 0:
+            if np.sum(idx_g) == 0:
                 #if verbose:
                 #    print('No unique gas IDs found in snapshot; continuing to next sink ID...', flush=True)
                 continue
