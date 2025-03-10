@@ -56,7 +56,7 @@ class SimulationData:
         else:
             snap_list = []
             for gp_fname in gasproperty_fnames:
-                snap_list.append(int(gp_fname.split('_')[1]))
+                snap_list.append(int(gp_fname.split('/')[-1].split('_')[1]))
             first_unexamined = np.max(snap_list) + 1
             if verbose:
                 print('Found accreted_gas_properties HDF5 files; starting at snapshot {0:d}...'.format(first_unexamined), flush=True)
