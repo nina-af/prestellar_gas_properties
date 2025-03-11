@@ -57,7 +57,21 @@ class SimulationData:
             snap_list = []
             for gp_fname in gasproperty_fnames:
                 snap_list.append(int(gp_fname.split('/')[-1].split('_')[1]))
-            first_unexamined = np.max(snap_list) + 1
+                
+            if verbose:
+                print('Found the following snapshot numbers in accreted_gas_properties HDF5 files:')
+                print(snap_list)
+            snap_arr = np.asarray(snap_list)
+    
+            # Mask any snapshot numbers outside of the range [imin, imax]
+            mask_1 = (snap_arr >= self.sim_imin)
+            mask_2 = (snap_arr <= self.sim_imax)
+            mask   = np.logical_and(mask_1, mask_2)
+            if verbose:
+                print('The following snapshots numbers found are in the specified range:')
+                print(snap_arr[mask])
+                
+            first_unexamined = np.max(snap_arr[mask]) + 1
             if verbose:
                 print('Found accreted_gas_properties HDF5 files; starting at snapshot {0:d}...'.format(first_unexamined), flush=True)
             return first_unexamined
@@ -77,6 +91,14 @@ class SimulationData:
     # for each snapshot.
     def get_simulation_data(self, verbose=True):
         imin, imax = self.first_unexamined, self.sim_imax
+        
+        # Check if all snapshots in simulation range have already been examined.
+        if (imin > imax):
+            if verbose:
+                print('ALL SNAPSHOTS IN RANGE [{0:d}-{1:d}] HAVE BEEN EXAMINED.'.format(self.sim_imin, self.sim_imax), flush=True)
+            return
+        
+        # Otherwise, loop through unexamined snapshots in simulation range.
         if verbose:
             print('GETTING ACCRETED GAS PROPERTY DATA FOR ENTIRE SIMULATION...')
             print('SNAPSHOT RANGE: [{0:d}->{1:d}]'.format(imin, imax), flush=True)
