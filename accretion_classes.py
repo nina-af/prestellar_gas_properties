@@ -72,7 +72,7 @@ class SimulationData:
                 print(snap_arr[mask])
 
             # Check for empty array:
-            if not snap_arr[mask]:
+            if (len(snap_arr[mask]) == 0):
                 if verbose:
                     print('No snapshot numbers found in range; starting from snapshot {0:d}...'.format(self.sim_imin), flush=True)
                 return self.sim_imin
