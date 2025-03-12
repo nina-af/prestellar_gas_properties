@@ -70,6 +70,12 @@ class SimulationData:
             if verbose:
                 print('The following snapshots numbers found are in the specified range:')
                 print(snap_arr[mask])
+
+            # Check for empty array:
+            if not snap_arr[mask]:
+                if verbose:
+                    print('No snapshot numbers found in range; starting from snapshot {0:d}...'.format(self.sim_imin), flush=True)
+                return self.sim_imin
                 
             first_unexamined = np.max(snap_arr[mask]) + 1
             if verbose:
