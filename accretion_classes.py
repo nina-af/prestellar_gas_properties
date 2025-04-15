@@ -41,11 +41,12 @@ class SimulationData:
         
         # Track last snapshot for which accreted gas property data has
         # already been saved as an HDF5 file.
-        self.first_unexamined = self.get_first_unexamined_snapshot()
+        #self.first_unexamined = self.get_first_unexamined_snapshot()
+        self.unexamined_snapshots = self.get_unexamined_snapshots()
         
-        
-    # Look for previously-generated accreted_gas_properties.hdf5 files and return next snapshot.
-    def get_first_unexamined_snapshot(self, verbose=True):
+    # Look for previously-generated accreted_gas_properties.hdf5 files and return array of unexamined snapshots.
+    #def get_first_unexamined_snapshot(self, verbose=True):
+    def get_unexamined_snapshots(self, verbose=True):
         gasproperty_fnames = glob.glob(self.datadir + 'snapshot_*_accreted_gas_properties.hdf5')
         # Check if list is empty.
         if not gasproperty_fnames:
@@ -64,23 +65,52 @@ class SimulationData:
             snap_arr = np.asarray(snap_list)
     
             # Mask any snapshot numbers outside of the range [imin, imax]
+            if verbose:
+                print('Desired snapshot range: {0:d}-{1:d}'.format(self.sim_imin, self.sim_imax), flush=True)
+
             mask_1 = (snap_arr >= self.sim_imin)
             mask_2 = (snap_arr <= self.sim_imax)
             mask   = np.logical_and(mask_1, mask_2)
             if verbose:
-                print('The following snapshots numbers found are in the specified range:')
-                print(snap_arr[mask])
+                print('The following snapshots numbers found are in the specified range:', flush=True)
+                print(snap_arr[mask], flush=True)
+
+            # All snapshots between sim_imin, sim_imax:
+            snaps_to_examine = np.arange(self.sim_imin, self.sim_imax+1)
 
             # Check for empty array:
             if (len(snap_arr[mask]) == 0):
                 if verbose:
                     print('No snapshot numbers found in range; starting from snapshot {0:d}...'.format(self.sim_imin), flush=True)
-                return self.sim_imin
+                return snaps_to_examine
                 
-            first_unexamined = np.max(snap_arr[mask]) + 1
+            #first_unexamined = np.max(snap_arr[mask]) + 1
+            #if verbose:
+            #    print('Found accreted_gas_properties HDF5 files; starting at snapshot {0:d}...'.format(first_unexamined), flush=True)
+            #return first_unexamined
+
+            # Get unexamined snapshots in the range [sim_imin, sim_imax].
+            examined_snaps = snap_arr[mask]
+            examined_snaps.sort()
             if verbose:
-                print('Found accreted_gas_properties HDF5 files; starting at snapshot {0:d}...'.format(first_unexamined), flush=True)
-            return first_unexamined
+                print('EXAMINED SNAPSHOTS:', flush=True)
+                print(examined_snaps, flush=True)
+                print('SNAPS TO EXAMINE:', flush=True)
+                print(snaps_to_examine, flush=True)
+            mask_unexamined      = np.isin(snaps_to_examine, examined_snaps)
+            unexamined_snapshots = snaps_to_examine[~mask_unexamined]
+            if verbose:
+                print('UNEXAMINED SNAPSHOTS:', flush=True)
+                print(unexamined_snapshots, flush=True)
+                print('len(unexamined_snapshots) = ' + str(len(unexamined_snapshots)), flush=True)
+
+            # All snapshots in range have been examined; return None.
+            if len(unexamined_snapshots) == 0:
+                if verbose:
+                    print('All snapshots in range [{0:d}-{1:d}] have been examined...'.format(self.sim_imin, self.sim_imax), flush=True)
+                return None
+            else:
+                return unexamined_snapshots
             
     # Get snapshot filename.
     def get_fname_snap(self, i):
@@ -96,19 +126,22 @@ class SimulationData:
     # Loop over all snapshots in simulation and write accreted gas properties data
     # for each snapshot.
     def get_simulation_data(self, verbose=True):
-        imin, imax = self.first_unexamined, self.sim_imax
-        
+        #imin, imax = self.first_unexamined, self.sim_imax        
+
         # Check if all snapshots in simulation range have already been examined.
-        if (imin > imax):
+        #if (imin > imax):
+        if self.unexamined_snapshots is None:
             if verbose:
                 print('ALL SNAPSHOTS IN RANGE [{0:d}-{1:d}] HAVE BEEN EXAMINED.'.format(self.sim_imin, self.sim_imax), flush=True)
             return
         
         # Otherwise, loop through unexamined snapshots in simulation range.
         if verbose:
-            print('GETTING ACCRETED GAS PROPERTY DATA FOR ENTIRE SIMULATION...')
-            print('SNAPSHOT RANGE: [{0:d}->{1:d}]'.format(imin, imax), flush=True)
-        for i in range(imin, imax+1, 1):
+            print('GETTING ACCRETED GAS PROPERTY DATA FOR THE FOLLOWING SNAPSHOTS...', flush=True)
+            print(self.unexamined_snapshots, flush=True)
+            #print('SNAPSHOT RANGE: [{0:d}->{1:d}]'.format(imin, imax), flush=True)
+        #for i in range(imin, imax+1, 1):
+        for i in self.unexamined_snapshots:
             if verbose:
                 print('SNAPSHOT {0:d}: GETTING GAS PROPERTY DATA'.format(i), flush=True)
             single_snap_data = self.get_data_single_snap(i)
@@ -683,6 +716,13 @@ class SnapshotGasProperties:
     
     # Alternate version, used in protostellar disk analysis scripts.
     def get_aspect_ratio_version_2(self, pos):
+        # If only one gas particle, return.
+        #print('get_aspect_ratio(): np.shape(pos) = ' + str(np.shape(pos)), flush=True)
+        if (np.shape(pos)[0] == 1):
+            print('In get_apsect_ratio_version_2(): only one gas cell...', flush=True)
+            eigvals = np.asarray([1.0, 1.0, 1.0])
+            eigvecs = np.asarray([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+            return eigvals, eigvecs
         centroid         = np.mean(pos, axis=0)
         centered_pos     = pos - centroid
         covar_matrix     = np.cov(centered_pos.T)
